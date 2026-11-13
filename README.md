@@ -15,6 +15,14 @@
 
 记录存于当前浏览器 localStorage，没有服务端、账号同步或数据上传。计时中每秒保存草稿；意外关闭后恢复到最后一次保存的时长，并作为已结束记录保存。换浏览器或清理网站数据前请导出。导出仅包含已结束记录。
 
+## 分组与分享
+
+每次空格掐表结束一组，结束计时前的最后一段也算一组。图内显示各组时长，下方分组条保留所有组；很窄的组在图内用序号表示。历史记录可展开查看每组时长与最高心率，并显示全程最高心率所在组的时长。恰好在掐表边界收到的心率归于刚结束的一组；最高值并列时取最先出现的组。没有心率采样的组显示“—”，不会填造读数。旧记录和 CSV 会根据原有掐表与采样自动计算，无需迁移。
+
+分享贺词使用默认娱乐估算：70 kg、活动强度 4 MET；能量为 `4 × 70 × 时长（小时）` kcal。文案中的“卡路里”按日常运动热量用法指千卡（大卡）。每次生成预览，从快走、慢跑、骑行、游泳、羽毛球、篮球、乒乓球、网球、排球、足球中随机选一种，并按对应 MET 换算等效时长。保存图片沿用这次预览的结果，不再抽选。按用户要求，图上不显示估算依据，仅用“约”表示。此估算不使用心率，也不是设备测得的能量。
+
+参考：[2024 Adult Compendium](https://pacompendium.com/adult-compendium/)、[Sports](https://pacompendium.com/sports/)、[Walking](https://pacompendium.com/walking/)、[Running](https://pacompendium.com/running/)、[Bicycling](https://pacompendium.com/bicycling/)、[Water Activities](https://pacompendium.com/water-activities/)。
+
 ## 心率设备
 
 需要 HTTPS（GitHub Pages 默认提供）或 localhost，以及支持 Web Bluetooth 的电脑 Chrome / Edge、Android Chrome。Safari / iOS 浏览器无法直接使用本页面的蓝牙连接。
@@ -24,7 +32,7 @@
 - 设备没有发送读数超过 15 秒时，实时值显示为“—”；相邻采样超过 15 秒时曲线断开，不生成虚假心率。
 - 无设备也可正常计时，心率留空。本项目没有用模拟数据冒充实时读数。
 
-单次计时上限 7 天；每次最多 10000 个掐表和 100000 个心率采样点。CSV 导入上限 30 MB。图片最多显示前 800 个掐表，CSV 保留全部数据。实际可保存记录数量取决于浏览器存储配额，空间不足时页面会提示导出。
+单次计时上限 7 天；每次最多 10000 个掐表和 100000 个心率采样点。CSV 导入上限 30 MB。图片最多显示前 800 组，CSV 保留全部数据。实际可保存记录数量取决于浏览器存储配额，空间不足时页面会提示导出。
 
 参考：[Chrome Web Bluetooth](https://developer.chrome.com/docs/capabilities/bluetooth)、[华为心率广播说明](https://consumer.huawei.com/ca/support/content/en-us15827504/)、[Apple Watch 蓝牙心率转发应用说明](https://pulse-link.humblemars.com/guides/apple-watch-bluetooth-heart-rate/)。
 
