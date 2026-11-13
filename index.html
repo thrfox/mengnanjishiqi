@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#110b0e"><meta name="description" content="猛男计时器：计时、掐表与蓝牙心率记录。"><title>猛男计时器 · 看看你有多久</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"><script src="core.js" defer></script><script src="app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#110b0e"><meta name="description" content="猛男计时器：计时、掐表与蓝牙心率记录。"><title>猛男计时器 · 看看你有多久</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261114-2"><script src="core.js" defer></script><script src="app.js?v=20261114-2" defer></script></head>
 <body>
 <header><a class="brand" href="./" aria-label="猛男计时器首页"><img src="logo.svg" width="42" height="42" alt=""><div><strong>猛男计时器</strong><span>看看你有多久</span></div></a><nav aria-label="数据操作"><button id="exportBtn">↓ 导出</button><button id="importBtn">↑ 导入</button><button id="shareBtn">↗ 分享图片</button><input id="importFile" type="file" accept=".csv,text/csv" hidden></nav></header>
 <main>
@@ -9,11 +9,11 @@
 <div class="timer-area"><div id="timer" class="timer" aria-label="总时长">00:00<span>.00</span></div><div id="sessionDate" class="muted">回车开始计时</div></div>
 <section class="monitor" aria-label="心率曲线"><div class="monitor-head"><div><span class="section-label">心率曲线</span><span class="unit">BPM / 时长 · 时间</span></div><button id="connectBtn" class="connection"><span class="dot"></span><span id="connectionLabel">连接心率设备</span></button></div>
 <div class="plot-layout"><div class="chart-wrap"><canvas id="chart" role="img" aria-label="心率随时间变化曲线"></canvas><div id="chartEmpty" class="chart-empty">等待心跳<span>连接设备后，心率将随计时记录</span></div><div id="tooltip" class="tooltip" hidden></div></div><div class="heart-panel"><span id="heartLabel" class="muted">实时心率</span><div class="heart-icon">♥</div><strong id="heart">—</strong><span class="unit">BPM</span><div class="peak">最高 <b id="peak">—</b></div></div></div>
-<div class="chart-foot"><span><i></i> 心率 <span class="lap-legend">┆ 掐表</span></span><span id="totalLabel">总时长 00:00.00</span></div></section>
+<div class="chart-foot"><span><i></i> 心率 <span class="lap-legend">┆ 掐表</span></span><span id="totalLabel">总时长 00:00.00</span></div><div id="bluetoothStatus" class="bluetooth-status" role="status">正在检查已授权手环…</div></section>
 <div class="laps-head"><span class="section-label">掐表记录 <small id="lapCount">00</small></span><span class="muted">单次 / 累计</span></div><div id="laps" class="laps"><span class="muted">按下空格，留下一个时间点。</span></div>
 <div class="controls"><button id="startBtn" class="primary">开始计时 <kbd>Enter</kbd></button><button id="lapBtn" class="secondary" disabled>掐表 <kbd>Space</kbd></button></div>
 <div class="below-controls"><span>回车开始 / 结束 · 空格掐表</span><button id="newBtn" hidden>返回新计时 ↗</button></div>
-<details class="device-help"><summary>设备连接说明</summary><p>使用电脑 Chrome / Edge 或 Android Chrome，通过 HTTPS 或 localhost 打开。先在设备上开启心率广播，再连接。Safari / iOS 浏览器不支持此连接方式。</p><p>小米、华为：仅支持已开启标准蓝牙心率广播的机型；不开放广播或需要私有认证的型号无法直接读取。Apple Watch：需通过支持标准蓝牙心率服务的第三方桥接应用转发后连接，不能保证原生直连。页面读取标准 Heart Rate Service（0x180D），不读取健康 App 历史数据。</p><p>保持页面开启；设备断开或超过 8 秒没有读数时，曲线会留空。记录仅保存在当前浏览器，清理站点数据会删除记录。</p></details>
+<details class="device-help"><summary>设备连接说明</summary><p>使用电脑 Chrome / Edge 或 Android Chrome，通过 HTTPS 或 localhost 打开。先在设备上开启心率广播。页面打开会自动尝试连接上次已授权的设备；首次访问请点击“连接心率设备”，选择你的手环。Safari / iOS 浏览器不支持此连接方式。</p><p>小米、华为：仅支持已开启标准蓝牙心率广播的机型；不开放广播或需要私有认证的型号无法直接读取。Apple Watch：需通过支持标准蓝牙心率服务的第三方桥接应用转发后连接，不能保证原生直连。页面读取标准 Heart Rate Service（0x180D），不读取健康 App 历史数据。</p><p>保持页面开启；设备断开或超过 15 秒没有读数时，曲线会留空。记录仅保存在当前浏览器，清理站点数据会删除记录。</p></details>
 </section>
 <aside><section id="longestRecord" class="longest-record" aria-label="最长记录" hidden></section><div class="history-heading"><h2>历史记录</h2><span id="historyCount">0 次记录</span></div><div id="history" class="history"></div><div class="local-note"><span class="dot"></span> 仅存于此浏览器</div></aside>
 </main><footer><span>猛男计时器</span><span>计时 · 掐表 · 心率</span></footer>
@@ -21,4 +21,5 @@
 <dialog id="noteDialog"><form method="dialog"><h2>记录备注</h2><label for="noteInput">给这次计时留句话</label><textarea id="noteInput" maxlength="2000" rows="4"></textarea><div class="dialog-actions"><button value="cancel">取消</button><button value="save" class="primary">保存</button></div></form></dialog>
 <dialog id="deleteDialog"><form method="dialog"><h2>删除这次记录？</h2><p>删除后无法恢复，建议先导出备份。</p><div class="dialog-actions"><button value="cancel">取消</button><button value="delete" class="primary">删除记录</button></div></form></dialog>
 <dialog id="shareDialog" class="share-dialog"><h2>图片预览</h2><img id="sharePreview" alt="猛男计时器分享图，含记录时间、总时长、心率曲线和网站地址"><div class="dialog-actions"><button id="closeShareBtn">关闭</button><button id="saveShareBtn" class="primary">保存图片</button></div></dialog>
+<dialog id="bluetoothDialog"><h2>连接心率手环</h2><p id="bluetoothPrompt">先开启手环的心率广播。首次访问需选择一次设备，下次进入会自动尝试连接。</p><div class="dialog-actions"><button id="skipBluetoothBtn">稍后连接</button><button id="authorizeBluetoothBtn" class="primary">连接心率设备</button></div></dialog>
 </body></html>
