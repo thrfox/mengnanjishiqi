@@ -21,7 +21,7 @@ function renderAll(){
   $('sessionStatus').textContent=running?'计时中':current?'历史回看':'准备就绪';$('sessionStatus').classList.toggle('running',running);$('sessionDate').textContent=current?dateText(current.startedAt)+(current.device?' · '+current.device:''):'回车开始计时';
   renderHeart();renderLaps();renderHistory();drawChart();
 }
-function renderHeart(){const fresh=latestHR!==null&&Date.now()-lastHRAt<=8000;const reviewing=!!current&&!running;$('heartLabel').textContent=reviewing?'末次心率':'实时心率';$('heart').textContent=reviewing?(current.samples.at(-1)?.bpm??'—'):(fresh?latestHR:'—');$('peak').textContent=current?.maxHeartRate||'—';}
+function renderHeart(){const fresh=latestHR!==null&&Date.now()-lastHRAt<=15000;$('heartLabel').textContent='实时心率';$('heart').textContent=fresh?latestHR:'—';$('peak').textContent=current?.maxHeartRate||'—';if(characteristic&&latestHR!==null&&!fresh)bluetoothStatus('超过 15 秒未收到更新，请检查手环测量状态。');}
 function renderLaps(){const laps=current?.laps||[];$('lapCount').textContent=String(laps.length).padStart(2,'0');$('laps').replaceChildren();if(!laps.length){const s=document.createElement('span');s.className='muted';s.textContent='按下空格，留下一个时间点。';$('laps').append(s);return;}laps.forEach((t,i)=>{const chip=document.createElement('div');chip.className='lap-chip';const num=document.createElement('em');num.textContent=String(i+1).padStart(2,'0');const text=document.createElement('div');text.textContent=C.format(t-(laps[i-1]||0));const small=document.createElement('small');small.textContent='累计 '+C.format(t);text.append(small);chip.append(num,text);$('laps').append(chip);});$('laps').scrollLeft=$('laps').scrollWidth;}
 function renderHistory(){
   records.sort((a,b)=>Date.parse(b.startedAt)-Date.parse(a.startedAt));
@@ -46,22 +46,100 @@ function drawPlot(ctx,width,height,record,duration){
   for(let i=0;i<=4;i++){const bpm=low+(high-low)*i/4,yy=y(bpm);ctx.strokeStyle='#39212d';ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(width-pad.r,yy);ctx.stroke();ctx.fillStyle='#927782';ctx.fillText(Math.round(bpm),pad.l-10,yy);}
   ctx.setLineDash([]);ctx.textAlign='center';ctx.textBaseline='top';const ticks=w<280?2:4;for(let i=0;i<=ticks;i++){const t=end*i/ticks;ctx.textAlign=i===ticks?'right':'center';ctx.fillStyle='#927782';ctx.fillText(C.format(t,false),x(t),height-pad.b+12);ctx.fillStyle='#745d68';ctx.fillText(record?new Date(Date.parse(record.startedAt)+t).toLocaleTimeString('zh-CN',{hour12:false}):'—',x(t),height-pad.b+29);}
   laps.forEach((t,i)=>{ctx.strokeStyle='#916071';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x(t),pad.t);ctx.lineTo(x(t),height-pad.b);ctx.stroke();ctx.fillStyle='#d193a7';ctx.textAlign='center';if(i===0||x(t)-x(laps[i-1])>45){ctx.fillText(String(i+1),x(t),pad.t);ctx.save();ctx.translate(x(t)+3,height-pad.b-5);ctx.rotate(-Math.PI/2);ctx.textAlign='left';ctx.fillText(C.format(t),0,0);ctx.restore();}});ctx.setLineDash([]);
-  if(samples.length){const segments=[];let seg=[];for(const p of samples){if(seg.length&&p.t-seg.at(-1).t>8000){segments.push(seg);seg=[];}seg.push(p);}if(seg.length)segments.push(seg);
+  if(samples.length){const segments=[];let seg=[];for(const p of samples){if(seg.length&&p.t-seg.at(-1).t>15000){segments.push(seg);seg=[];}seg.push(p);}if(seg.length)segments.push(seg);
     for(const s of segments){ctx.beginPath();ctx.moveTo(x(s[0].t),y(s[0].bpm));s.slice(1).forEach(p=>ctx.lineTo(x(p.t),y(p.bpm)));ctx.lineTo(x(s.at(-1).t),height-pad.b);ctx.lineTo(x(s[0].t),height-pad.b);ctx.closePath();const gradient=ctx.createLinearGradient(0,pad.t,0,height-pad.b);gradient.addColorStop(0,'#ff486c30');gradient.addColorStop(1,'#ff486c00');ctx.fillStyle=gradient;ctx.fill();ctx.beginPath();ctx.moveTo(x(s[0].t),y(s[0].bpm));s.slice(1).forEach(p=>ctx.lineTo(x(p.t),y(p.bpm)));ctx.strokeStyle='#ff486c';ctx.lineWidth=2;ctx.stroke();if(s.length===1){ctx.beginPath();ctx.arc(x(s[0].t),y(s[0].bpm),3,0,2*Math.PI);ctx.fillStyle='#ff486c';ctx.fill();}}
     const p=samples.at(-1);ctx.beginPath();ctx.arc(x(p.t),y(p.bpm),3,0,Math.PI*2);ctx.fillStyle='#ff819d';ctx.fill();
   }
 }
 function drawChart(){const canvas=$('chart'),rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);drawPlot(ctx,rect.width,rect.height,current,elapsed());$('chartEmpty').hidden=!!current?.samples.length;if(!current?.samples.length){$('chartEmpty').firstChild.textContent=current&&!running?'本次未记录心率':'等待心跳';}}
-async function connect(){
-  if(connecting)return;if(device?.gatt.connected){device.gatt.disconnect();return;}
-  if(!navigator.bluetooth||!window.isSecureContext){toast('请使用支持蓝牙的电脑 Chrome / Edge 或 Android Chrome，通过 HTTPS 打开。');return;}
-  connecting=true;$('connectBtn').disabled=true;$('connectionLabel').textContent='正在连接…';let candidate;
-  try{candidate=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}],optionalServices:['heart_rate']});device=candidate;device.addEventListener('gattserverdisconnected',disconnected);const server=await device.gatt.connect();const service=await server.getPrimaryService('heart_rate');characteristic=await service.getCharacteristic('heart_rate_measurement');characteristic.addEventListener('characteristicvaluechanged',receiveHeart);await characteristic.startNotifications();$('connectionLabel').textContent=device.name||'心率设备';$('connectBtn').classList.add('connected');$('connectBtn').title='点击断开连接';toast('已连接 '+(device.name||'心率设备'));}
-  catch(e){if(candidate?.gatt.connected)candidate.gatt.disconnect();disconnected();if(e.name!=='NotFoundError')toast('连接失败：请开启标准心率广播，并关闭占用设备的其他连接。');}
-  finally{connecting=false;$('connectBtn').disabled=false;}
+const DEVICE_KEY='mengnan-timer:bluetooth-device:v1';
+let reconnectTimer=null,reconnectAttempts=0,autoReconnect=true,waitingTimer=null;
+function bluetoothStatus(message){$('bluetoothStatus').textContent=message;}
+function bluetoothButtons(){
+  $('connectBtn').disabled=connecting;
+  $('authorizeBluetoothBtn').disabled=connecting;
+  $('connectionLabel').textContent=connecting?'正在连接…':characteristic?(device?.name||'心率设备'):'连接心率设备';
+  $('connectBtn').classList.toggle('connected',!!characteristic);
+  $('connectBtn').title=characteristic?'点击断开连接':'选择手环并读取心率';
 }
-function disconnected(){if(characteristic)characteristic.removeEventListener('characteristicvaluechanged',receiveHeart);characteristic=null;latestHR=null;lastHRAt=0;$('connectionLabel').textContent='连接心率设备';$('connectBtn').classList.remove('connected');$('connectBtn').title='';renderHeart();}
-function receiveHeart(event){let bpm;try{bpm=C.decodeHeartRate(event.target.value);}catch(e){return;}if(bpm===null)return;latestHR=bpm;lastHRAt=Date.now();if(running){const t=elapsed();if(current.samples.length<100000){current.samples.push({t,bpm});current.maxHeartRate=Math.max(current.maxHeartRate,bpm);current.device=device?.name||'蓝牙心率设备';}else if(current.samples.length===100000){toast('心率采样已达上限，请结束本次计时。');toggleTimer();}drawChart();}renderHeart();}
+function promptBluetooth(message){
+  if(message)$('bluetoothPrompt').textContent=message;
+  if(!$('bluetoothDialog').open&&!document.querySelector('dialog[open]'))$('bluetoothDialog').showModal();
+}
+function clearHeartConnection(){
+  clearTimeout(waitingTimer);
+  if(characteristic)characteristic.removeEventListener('characteristicvaluechanged',receiveHeart);
+  characteristic=null;latestHR=null;lastHRAt=0;renderHeart();
+}
+function scheduleReconnect(reason=''){
+  clearTimeout(reconnectTimer);
+  if(!autoReconnect||!device||connecting)return;
+  if(reconnectAttempts>=3){bluetoothStatus(reason+' 自动重连未成功，请开启心率广播后点击“连接心率设备”。');return;}
+  const delay=[2000,5000,10000][reconnectAttempts++];
+  bluetoothStatus(reason?reason+' 正在等待自动重连…':'设备已断开，正在等待自动重连…');
+  reconnectTimer=setTimeout(()=>{if(autoReconnect&&!connecting)void openHeartDevice(device,true);},delay);
+}
+function disconnected(event){
+  if(event?.target&&event.target!==device)return;
+  clearHeartConnection();bluetoothButtons();
+  bluetoothStatus('心率设备已断开');
+  if(!connecting)scheduleReconnect();
+}
+async function openHeartDevice(candidate,automatic=false){
+  if(connecting)return false;
+  connecting=true;clearTimeout(reconnectTimer);clearHeartConnection();
+  if(device)device.removeEventListener('gattserverdisconnected',disconnected);
+  device=candidate;device.addEventListener('gattserverdisconnected',disconnected);
+  bluetoothButtons();let stage='建立蓝牙连接';
+  try{
+    bluetoothStatus('正在连接 '+(device.name||'心率设备')+'…');
+    const server=await device.gatt.connect();
+    stage='获取心率服务 0x180D';const service=await server.getPrimaryService('heart_rate');
+    stage='获取心率特征 0x2A37';characteristic=await service.getCharacteristic('heart_rate_measurement');
+    characteristic.addEventListener('characteristicvaluechanged',receiveHeart);
+    stage='订阅心率通知';await characteristic.startNotifications();
+    if(!device.gatt.connected)throw Error('订阅期间设备断开');
+    reconnectAttempts=0;autoReconnect=true;
+    try{localStorage.setItem(DEVICE_KEY,device.id);}catch(e){}
+    if(latestHR===null)bluetoothStatus('已连接 '+(device.name||'心率设备')+'，等待心率数据');
+    waitingTimer=setTimeout(()=>{if(characteristic&&latestHR===null)bluetoothStatus('已订阅，尚未收到心率。请在手环开启心率测量或运动模式。');},15000);
+    if($('bluetoothDialog').open)$('bluetoothDialog').close();
+    return true;
+  }catch(error){
+    clearHeartConnection();if(device?.gatt.connected)device.gatt.disconnect();
+    bluetoothStatus(stage+'失败：'+(error.message||error.name)+'。请开启心率广播，或暂时断开手机连接后重试。');
+    if(!automatic)toast(stage+'失败，请检查手环广播及连接占用。');
+    return false;
+  }finally{connecting=false;bluetoothButtons();if(automatic&&!characteristic)scheduleReconnect($('bluetoothStatus').textContent);}
+}
+async function connect(){
+  if(connecting)return;
+  if(characteristic&&device?.gatt.connected){autoReconnect=false;clearTimeout(reconnectTimer);device.gatt.disconnect();disconnected();return;}
+  if(!navigator.bluetooth||!window.isSecureContext){bluetoothStatus('当前浏览器不支持蓝牙，请用电脑 Chrome / Edge 或 Android Chrome，通过 HTTPS 打开。');toast('当前浏览器不支持蓝牙连接。');return;}
+  clearTimeout(reconnectTimer);autoReconnect=false;connecting=true;bluetoothButtons();
+  try{
+    // Matches the demo's “显示全部设备”: bands may omit 0x180D from advertising.
+    const candidate=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['heart_rate']});
+    connecting=false;autoReconnect=true;reconnectAttempts=0;
+    await openHeartDevice(candidate);
+  }catch(error){bluetoothStatus(error.name==='NotFoundError'?'未选择设备，点击“连接心率设备”可重试。':'选择设备失败：'+(error.message||error.name));}
+  finally{connecting=false;bluetoothButtons();}
+}
+async function initializeBluetooth(){
+  if(!navigator.bluetooth||!window.isSecureContext){bluetoothStatus('当前浏览器不支持蓝牙连接；可使用电脑 Chrome / Edge 或 Android Chrome。');return;}
+  bluetoothStatus('正在检查已授权手环…');
+  try{
+    const granted=navigator.bluetooth.getDevices?await navigator.bluetooth.getDevices():[];
+    if(connecting||characteristic)return;
+    let preferred;try{preferred=localStorage.getItem(DEVICE_KEY);}catch(e){}
+    const previous=granted.find(d=>d.id===preferred)||(granted.length===1?granted[0]:null);
+    if(previous){await openHeartDevice(previous,true);return;}
+    bluetoothStatus('首次连接需选择手环；连接后立即显示实时心率。');
+    promptBluetooth('先开启手环的心率广播。首次访问需选择一次设备，下次进入会自动尝试连接。');
+  }catch(error){bluetoothStatus('无法检查已授权设备，请点击“连接心率设备”重试。');promptBluetooth();}
+}
+
+function receiveHeart(event){let bpm;try{bpm=C.decodeHeartRate(event.target.value);}catch(e){return;}if(bpm===null)return;latestHR=bpm;lastHRAt=Date.now();clearTimeout(waitingTimer);bluetoothStatus('正在接收心率 · '+(device?.name||'心率设备')+' · '+new Date(lastHRAt).toLocaleTimeString('zh-CN',{hour12:false}));if(running){const t=elapsed();if(current.samples.length<100000){current.samples.push({t,bpm});current.maxHeartRate=Math.max(current.maxHeartRate,bpm);current.device=device?.name||'蓝牙心率设备';}else if(current.samples.length===100000){toast('心率采样已达上限，请结束本次计时。');toggleTimer();}drawChart();}renderHeart();}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
 function exportCSV(){if(!records.length){toast(running?'请先结束计时，再导出历史记录。':'还没有可导出的记录。');return;}download(new Blob([C.toCSV(records)],{type:'text/csv;charset=utf-8'}),'猛男计时器-'+new Date().toISOString().slice(0,10)+'.csv');toast('已导出 '+records.length+' 条历史记录');}
 async function importCSV(event){const file=event.target.files[0];if(!file)return;try{if(file.size>30*1024*1024)throw Error('文件超过 30 MB');const incoming=C.fromCSV(await file.text()),ids=new Set(records.map(r=>r.id)),added=[];for(const r of incoming){if(!ids.has(r.id)){added.push(r);ids.add(r.id);}}if(!added.length){toast('没有新的记录可导入');return;}const next=[...records,...added].sort((a,b)=>Date.parse(b.startedAt)-Date.parse(a.startedAt));if(!saveHistory(next))return;records=next;renderHistory();toast('已导入 '+added.length+' 条记录，重复记录已跳过');}catch(e){toast('导入失败：'+e.message);}finally{event.target.value='';}}
@@ -79,4 +157,6 @@ window.addEventListener('resize',drawChart);document.addEventListener('visibilit
 window.addEventListener('storage',e=>{if(e.key===KEY&&!running)toast('另一个标签页修改了记录，请刷新页面以读取最新记录。');});
 function load(){try{const raw=localStorage.getItem(KEY);if(raw){const parsed=JSON.parse(raw);if(!Array.isArray(parsed))throw Error('记录格式不正确');records=parsed.map(C.validateRecord).sort((a,b)=>Date.parse(b.startedAt)-Date.parse(a.startedAt));}const draft=localStorage.getItem(DRAFT);if(draft){const recovered=C.validateRecord(JSON.parse(draft));if(!records.some(r=>r.id===recovered.id)){records.unshift(recovered);if(saveHistory())removeDraft();current=recovered;selectedId=recovered.id;toast('已恢复上次中断的计时，时长截至最后一次自动保存。');}else removeDraft();}}catch(e){toast('本地记录未能读取，请保留浏览器数据并尝试导入备份。');}}
 function frame(time){if(time-lastPaint>=40){if(running){renderTimer();if(elapsed()>=C.MAX_DURATION){toggleTimer();toast('已达到 7 天计时上限，记录已结束。');}}renderHeart();lastPaint=time;}if(running&&Date.now()-lastPersist>=1000){checkpoint();drawChart();lastPersist=Date.now();}requestAnimationFrame(frame);}
-load();renderAll();requestAnimationFrame(frame);
+$('skipBluetoothBtn').onclick=()=>$('bluetoothDialog').close();
+$('authorizeBluetoothBtn').onclick=()=>{$('bluetoothDialog').close();void connect();};
+load();renderAll();requestAnimationFrame(frame);void initializeBluetooth();
