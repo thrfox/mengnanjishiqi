@@ -5,6 +5,7 @@
     ms=Math.max(0,Math.floor(ms));const h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60;
     return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+(centis?'.'+String(Math.floor(ms/10)%100).padStart(2,'0'):'');
   }
+  function formatGroupDuration(ms){const seconds=Math.floor(Math.max(0,ms)/1000);return Math.floor(seconds/60)+'分'+seconds%60+'秒';}
   function validateRecord(r){
     if(!r||typeof r!=='object'||typeof r.id!=='string'||!r.id||r.id.length>150||!Number.isFinite(Date.parse(r.startedAt))||!Number.isFinite(r.durationMs)||r.durationMs<0||r.durationMs>MAX_DURATION||typeof r.note!=='string'||r.note.length>2000||typeof r.device!=='string'||r.device.length>200||!Array.isArray(r.laps)||!Array.isArray(r.samples)||r.laps.length>10000||r.samples.length>100000)throw Error('记录格式无效或超过支持范围');
     let previous=-1;
@@ -54,5 +55,5 @@
     return {minutes:Math.floor(seconds/60),seconds:seconds%60,kcal,equivalentMinutes,sport,
       lines:[`恭喜你坚持了${Math.floor(seconds/60)}分钟${seconds%60}秒，消耗约${readable(kcal)}卡路里，`,`相当于${sport.verb}了约${readable(equivalentMinutes)}分钟！`]};
   }
-  root.TimerCore={format,validateRecord,toCSV,fromCSV,decodeHeartRate,getGroups,peakGroup,shareCelebration,SPORTS,MAX_DURATION};
+  root.TimerCore={format,formatGroupDuration,validateRecord,toCSV,fromCSV,decodeHeartRate,getGroups,peakGroup,shareCelebration,SPORTS,MAX_DURATION};
 })(typeof module!=='undefined'?module.exports:window);
