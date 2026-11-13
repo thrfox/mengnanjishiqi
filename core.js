@@ -53,7 +53,7 @@
     const kcal=4*70*duration/3600000,equivalentMinutes=minutes*4/sport.met;
     const readable=n=>n===0?'0':n<.1?'不足0.1':n.toFixed(1).replace(/\.0$/,'');
     return {minutes:Math.floor(seconds/60),seconds:seconds%60,kcal,equivalentMinutes,sport,
-      lines:[`恭喜你坚持了${Math.floor(seconds/60)}分钟${seconds%60}秒，消耗约${readable(kcal)}卡路里，`,`相当于${sport.verb}了约${readable(equivalentMinutes)}分钟！`]};
+      lines:[`恭喜你坚持了${Math.floor(seconds/60)}分${seconds%60}秒，消耗约${readable(kcal)}卡路里，`,`相当于${sport.verb}了约${readable(equivalentMinutes)}分钟！`]};
   }
   root.TimerCore={format,formatGroupDuration,validateRecord,toCSV,fromCSV,decodeHeartRate,getGroups,peakGroup,shareCelebration,SPORTS,MAX_DURATION};
 })(typeof module!=='undefined'?module.exports:window);

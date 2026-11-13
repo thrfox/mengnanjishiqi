@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#110b0e"><meta name="description" content="猛男计时器：计时、掐表与蓝牙心率记录。"><title>猛男计时器 · 看看你有多久</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261114-6"><script src="core.js?v=20261114-6" defer></script><script src="app.js?v=20261114-6" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#110b0e"><meta name="description" content="猛男计时器：计时、掐表与蓝牙心率记录。"><title>猛男计时器 · 看看你有多久</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261114-7"><script src="core.js?v=20261114-7" defer></script><script src="app.js?v=20261114-7" defer></script></head>
 <body>
 <header><a class="brand" href="./" aria-label="猛男计时器首页"><img src="logo.svg" width="42" height="42" alt=""><div><strong>猛男计时器</strong><span>看看你有多久</span></div></a><nav aria-label="数据操作"><button id="exportBtn">↓ 导出</button><button id="importBtn">↑ 导入</button><button id="shareBtn">↗ 分享图片</button><input id="importFile" type="file" accept=".csv,text/csv" hidden></nav></header>
 <main>
 <section class="workspace" aria-label="计时工作区">
 <div class="session-heading"><span class="eyebrow">计时 / 心率</span><span id="sessionStatus" class="status">准备就绪</span></div>
-<div class="timer-area"><div id="timer" class="timer" aria-label="总时长">00:00<span>.00</span></div><div id="sessionDate" class="muted">回车开始计时</div></div>
+<div class="timer-area"><div id="timer" class="timer" aria-label="总时长">0<span>分</span>0<span>秒</span></div><div id="sessionDate" class="muted">回车开始计时</div></div>
 <section class="monitor" aria-label="心率曲线"><div class="monitor-head"><div><span class="section-label">心率曲线</span><span class="unit">BPM / 时长 · 时间</span></div><button id="connectBtn" class="connection"><span class="dot"></span><span id="connectionLabel">连接心率设备</span></button></div>
 <div class="plot-layout"><div class="chart-wrap"><canvas id="chart" role="img" aria-label="心率随时间变化曲线"></canvas><div id="chartEmpty" class="chart-empty">等待心跳<span>连接设备后，心率将随计时记录</span></div><div id="tooltip" class="tooltip" hidden></div></div><div class="heart-panel"><span id="heartLabel" class="muted">实时心率</span><div class="heart-icon">♥</div><strong id="heart">—</strong><span class="unit">BPM</span><div class="peak">最高 <b id="peak">—</b></div></div></div>
-<div id="chartGroups" class="chart-groups" aria-label="各组时长" hidden></div><div class="chart-foot"><span><i></i> 心率 <span class="lap-legend">┆ 掐表</span></span><span id="totalLabel">总时长 00:00.00</span></div><div id="bluetoothStatus" class="bluetooth-status" role="status">正在检查已授权手环…</div></section>
+<div id="chartGroups" class="chart-groups" aria-label="各组时长" hidden></div><div class="chart-foot"><span><i></i> 心率 <span class="lap-legend">┆ 掐表</span></span><span id="totalLabel">总时长 0分0秒</span></div><div id="bluetoothStatus" class="bluetooth-status" role="status">正在检查已授权手环…</div></section>
 <div class="laps-head"><span class="section-label">掐表记录 <small id="lapCount">00</small></span><span class="muted">单次 / 累计</span></div><div id="laps" class="laps"><span class="muted">按下空格，留下一个时间点。</span></div>
 <div class="controls"><button id="startBtn" class="primary">开始计时 <kbd>Enter</kbd></button><button id="lapBtn" class="secondary" disabled>掐表 <kbd>Space</kbd></button></div>
 <div class="below-controls"><span>回车开始 / 结束 · 空格掐表</span><button id="newBtn" hidden>返回新计时 ↗</button></div>
