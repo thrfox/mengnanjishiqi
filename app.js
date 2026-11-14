@@ -69,6 +69,17 @@ function drawPlot(ctx,width,height,record,duration){
   if(samples.length){const segments=[];let seg=[];for(const p of samples){if(seg.length&&p.t-seg.at(-1).t>15000){segments.push(seg);seg=[];}seg.push(p);}if(seg.length)segments.push(seg);
     for(const s of segments){ctx.beginPath();ctx.moveTo(x(s[0].t),y(s[0].bpm));s.slice(1).forEach(p=>ctx.lineTo(x(p.t),y(p.bpm)));ctx.lineTo(x(s.at(-1).t),height-pad.b);ctx.lineTo(x(s[0].t),height-pad.b);ctx.closePath();const gradient=ctx.createLinearGradient(0,pad.t,0,height-pad.b);gradient.addColorStop(0,'#ff486c30');gradient.addColorStop(1,'#ff486c00');ctx.fillStyle=gradient;ctx.fill();ctx.beginPath();ctx.moveTo(x(s[0].t),y(s[0].bpm));s.slice(1).forEach(p=>ctx.lineTo(x(p.t),y(p.bpm)));ctx.strokeStyle='#ff486c';ctx.lineWidth=2;ctx.stroke();if(s.length===1){ctx.beginPath();ctx.arc(x(s[0].t),y(s[0].bpm),3,0,2*Math.PI);ctx.fillStyle='#ff486c';ctx.fill();}}
     const p=samples.at(-1);ctx.beginPath();ctx.arc(x(p.t),y(p.bpm),3,0,Math.PI*2);ctx.fillStyle='#ff819d';ctx.fill();
+    const peak=samples.reduce((best,p)=>p.bpm>best.bpm?p:best,samples[0]);
+    const px=x(peak.t),py=y(peak.bpm),label='最高 '+peak.bpm+' BPM';
+    ctx.save();ctx.font='bold 11px "Microsoft YaHei",sans-serif';
+    const boxW=ctx.measureText(label).width+16,boxH=23;
+    const boxX=Math.max(pad.l,Math.min(width-pad.r-boxW,px-boxW/2));
+    const above=py-35>=pad.t+3;
+    const boxY=Math.max(pad.t+3,Math.min(height-pad.b-boxH-3,above?py-35:py+14));
+    ctx.strokeStyle='#ffb5ca66';ctx.lineWidth=1;ctx.setLineDash([2,5]);ctx.beginPath();ctx.moveTo(px,py+6);ctx.lineTo(px,height-pad.b);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle='#ffc5d6';ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(Math.max(boxX+6,Math.min(boxX+boxW-6,px)),above?boxY+boxH:boxY);ctx.stroke();
+    ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fillStyle='#25101a';ctx.fill();ctx.strokeStyle='#ffe0ea';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle='#ff486c';ctx.fill();
+    ctx.beginPath();ctx.roundRect(boxX,boxY,boxW,boxH,5);ctx.fillStyle='#341622';ctx.fill();ctx.strokeStyle='#b84c6d';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#ffe1eb';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,boxX+boxW/2,boxY+boxH/2);ctx.restore();
   }
 }
 function drawChart(){renderChartGroups();const canvas=$('chart'),rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);drawPlot(ctx,rect.width,rect.height,current,elapsed());$('chartEmpty').hidden=!!current?.samples.length;if(!current?.samples.length){$('chartEmpty').firstChild.textContent=current&&!running?'本次未记录心率':'等待心跳';}}
